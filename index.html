@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Base Xzeet X Shadow</title>
+  <script src="https://unpkg.com/feather-icons"></script>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      margin: 0;
+      overflow: hidden;
+    }
+    canvas#bgCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: -1;
+      background: #0d1117;
+    }
+    header {
+      background: rgba(22,27,34,0.95);
+      padding: 20px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      border-bottom: 1px solid #30363d;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      z-index: 5;
+    }
+    main { padding: 20px; max-width: 900px; margin: auto; position: relative; z-index: 5; }
+
+    .card {
+      background: rgba(22,27,34,0.95);
+      border-radius: 16px;
+      padding: 20px;
+      margin: 20px 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .card h2 { text-align: center; margin-top: 0; }
+
+    input, button {
+      padding: 12px;
+      margin: 6px;
+      border-radius: 10px;
+      border: none;
+      font-size: 15px;
+    }
+    input[type="text"] {
+      width: 65%;
+      background: #0d1117;
+      color: #e6edf3;
+      border: 1px solid #30363d;
+    }
+    button {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #238636;
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 600;
+    }
+    button:hover { transform: scale(1.05); opacity: 0.9; }
+    .btn-delete { background: #b62324; }
+    .btn-refresh { background: #0969da; }
+
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #161b22;
+      padding: 10px 15px;
+      margin: 8px 0;
+      border-radius: 12px;
+      border: 1px solid #30363d;
+    }
+    .list-item span { font-weight: 500; }
+    #status { text-align: center; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <canvas id="bgCanvas"></canvas>
+
+  <header>
+    <i data-feather="database"></i> Data Base Xzeet X Shadow
+  </header>
+
+  <main>
+    <!-- Card input -->
+    <div class="card">
+      <h2><i data-feather="plus-circle"></i> Tambah Nomor</h2>
+      <div style="text-align:center;">
+        <input type="text" id="nomor" placeholder="Masukkan Nomor (62xxx)">
+        <input type="text" id="key" placeholder="Masukkan Key">
+        <button onclick="addData()"><i data-feather="save"></i> Simpan</button>
+        <button class="btn-refresh" onclick="fetchData()"><i data-feather="refresh-cw"></i> Refresh</button>
+      </div>
+      <p id="status"></p>
+    </div>
+
+    <!-- Card daftar data -->
+    <div class="card">
+      <h2><i data-feather="list"></i> List Nomor</h2>
+      <div id="list"></div>
+    </div>
+  </main>
+
+  <script>
+    // === KONFIGURASI GITHUB ===
+    const token = "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"; // ganti token
+    const repoOwner = "XyzzMoods";
+    const repoName = "Data-Base";
+    const filePath = "db.json";
+
+    async function fetchData() {
+      try {
+        let res = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`, {
+          headers: { Authorization: `token ${token}` }
+        });
+        let file = await res.json();
+        let content = JSON.parse(atob(file.content));
+        renderList(content, file.sha);
+      } catch (e) {
+        document.getElementById("status").innerText = "Gagal mengambil data";
+      }
+    }
+
+    async function addData() {
+      const nomor = document.getElementById("nomor").value.trim();
+      const key = document.getElementById("key").value.trim();
+      if (!nomor || !key) { alert("Nomor dan key wajib diisi!"); return; }
+
+      let res = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`, {
+        headers: { Authorization: `token ${token}` }
+      });
+      let file = await res.json();
+      let content = JSON.parse(atob(file.content));
+
+      content[nomor] = key;
+      const updatedContent = btoa(JSON.stringify(content, null, 2));
+
+      await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`, {
+        method: "PUT",
+        headers: { Authorization: `token ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ message: `Add nomor ${nomor}`, content: updatedContent, sha: file.sha })
+      });
+
+      document.getElementById("status").innerText = "Data berhasil ditambahkan!";
+      fetchData();
+    }
+
+    async function deleteData(nomor) {
+      let res = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`, {
+        headers: { Authorization: `token ${token}` }
+      });
+      let file = await res.json();
+      let content = JSON.parse(atob(file.content));
+
+      delete content[nomor];
+      const updatedContent = btoa(JSON.stringify(content, null, 2));
+
+      await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`, {
+        method: "PUT",
+        headers: { Authorization: `token ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ message: `Delete nomor ${nomor}`, content: updatedContent, sha: file.sha })
+      });
+      fetchData();
+    }
+
+    function renderList(data) {
+      const listDiv = document.getElementById("list");
+      listDiv.innerHTML = "";
+      for (let nomor in data) {
+        let div = document.createElement("div");
+        div.className = "list-item";
+        div.innerHTML = `
+          <span><i data-feather="smartphone"></i> ${nomor} → ${data[nomor]}</span>
+          <button class="btn-delete" onclick="deleteData('${nomor}')"><i data-feather="trash-2"></i> Hapus</button>
+        `;
+        listDiv.appendChild(div);
+      }
+      feather.replace();
+    }
+
+    // === BACKGROUND PARTICLE ===
+    const canvas = document.getElementById("bgCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    class Particle {
+      constructor() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.radius = 2;
+        this.vx = (Math.random() - 0.5) * 1.5;
+        this.vy = (Math.random() - 0.5) * 1.5;
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = "#e6edf3";
+        ctx.fill();
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+        if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+      }
+    }
+
+    const particles = [];
+    for (let i = 0; i < 80; i++) particles.push(new Particle());
+
+    function animateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => { p.update(); p.draw(); });
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(200,200,200,${1 - dist / 120})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(animateParticles);
+    }
+    animateParticles();
+
+    window.addEventListener("resize", () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+
+    window.onload = () => {
+      feather.replace();
+      fetchData();
+    };
+  </script>
+</body>
+</html>
